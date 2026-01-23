@@ -11,4 +11,3 @@ requests
 PyPDF2
 tavily-python
 python-pptx
-streamlit
