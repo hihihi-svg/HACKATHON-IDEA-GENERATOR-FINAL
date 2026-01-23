@@ -30,7 +30,22 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🚀 Hackathon Idea Generator")
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- Header & Credits ---
+col_header, col_credits = st.columns([3, 1])
+
+with col_header:
+    st.title("🚀 Hackathon Idea Generator")
+
+with col_credits:
+    if st.session_state.get("is_admin", False):
+        st.metric("Credits", "Unlimited ♾️", delta="Admin Mode")
+    else:
+        usage = st.session_state.get("usage_count", 0)
+        left = max(0, USAGE_LIMIT - usage)
+        st.metric("Credits Left", f"{left}/{USAGE_LIMIT}", delta="Trial Version" if left > 0 else "Limit Reached", delta_color="normal" if left > 0 else "off")
 st.markdown("Generate innovative project ideas using your hackathon description and uploaded topics!")
 
 # --- Sidebar ---
@@ -86,6 +101,18 @@ st.sidebar.markdown("""
 4. **Generate Content**: Create detailed documentation for each idea
 """)
 
+# --- Admin Access ---
+st.sidebar.markdown("---")
+with st.sidebar.expander("🔐 Admin Access"):
+    admin_pass = st.text_input("Enter Admin Password", type="password", key="admin_pass_input")
+    # Check against secrets or default
+    secret_pass = st.secrets.get("ADMIN_PASSWORD", "admin123") 
+    if admin_pass == secret_pass:
+        st.session_state["is_admin"] = True
+        st.sidebar.success("✅ Admin Mode Active")
+    else:
+        st.session_state["is_admin"] = False
+
 # --- Main Area ---
 st.markdown("## 📝 Hackathon Description")
 hackathon_text = st.text_area(
@@ -125,14 +152,17 @@ USAGE_LIMIT = 2
 if generate_btn:
     if not hackathon_text:
         st.warning("⚠️ Please enter a hackathon description first.")
-    elif st.session_state["usage_count"] >= USAGE_LIMIT:
+    # Check limit unless Admin
+    elif st.session_state.get("usage_count", 0) >= USAGE_LIMIT and not st.session_state.get("is_admin", False):
         st.error(f"🚫 Usage limit reached! You have used your {USAGE_LIMIT} free trials for this session.")
+        st.info("🔐 Enter Admin Password in sidebar for unlimited access.")
     else:
         with st.spinner("🔍 Analyzing and generating innovative ideas..."):
-            # Increment usage count
-            st.session_state["usage_count"] += 1
-            trials_left = USAGE_LIMIT - st.session_state["usage_count"]
-            st.toast(f"Trial used! {trials_left} remaining.", icon="ℹ️")
+            # Increment usage count only if not admin
+            if not st.session_state.get("is_admin", False):
+                st.session_state["usage_count"] += 1
+                trials_left = USAGE_LIMIT - st.session_state["usage_count"]
+                st.toast(f"Trial used! {trials_left} remaining.", icon="ℹ️")
 
             # Step 1: Summarize
             summary = summarize_text(hackathon_text)
