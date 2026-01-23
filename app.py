@@ -6,8 +6,9 @@ from utils.summarizer import summarize_text
 from utils.retriever import create_vector_db, retrieve_relevant_topics
 from utils.resource_finder import find_relevant_resources
 from utils.topic_generator import generate_hackathon_ideas
+import utils.auth as auth
 
-# ✅ Initialize OpenAI client with latest API
+# ✅ Initialize OpenAI client
 client = OpenAI(api_key=st.secrets["openai_api_key"])
 
 # Constants
@@ -15,462 +16,281 @@ USAGE_LIMIT = 2
 
 st.set_page_config(page_title="Hackathon Idea Generator", page_icon="🚀", layout="wide")
 
-# Custom CSS for better styling
+# Custom CSS
 st.markdown("""
     <style>
-    .main-header {
-        font-size: 3rem;
-        font-weight: bold;
-        text-align: center;
-        color: #1f77b4;
-        margin-bottom: 1rem;
-    }
-    .sub-header {
-        text-align: center;
-        color: #666;
-        margin-bottom: 2rem;
-    }
+    .main-header { font-size: 3rem; font-weight: bold; text-align: center; color: #1f77b4; margin-bottom: 1rem; }
+    .sub-header { text-align: center; color: #666; margin-bottom: 2rem; }
     </style>
     """, unsafe_allow_html=True)
 
+# --- Authentication Logic ---
+if "user" not in st.session_state:
+    st.session_state["user"] = None
 
-
-# --- Header & Credits ---
-col_header, col_credits = st.columns([3, 1])
-
-with col_header:
-    st.title("🚀 Hackathon Idea Generator")
-
-with col_credits:
-    if st.session_state.get("is_admin", False):
-        st.metric("Credits", "Unlimited ♾️", delta="Admin Mode")
-    else:
-        usage = st.session_state.get("usage_count", 0)
-        left = max(0, USAGE_LIMIT - usage)
-        st.metric("Credits Left", f"{left}/{USAGE_LIMIT}", delta="Trial Version" if left > 0 else "Limit Reached", delta_color="normal" if left > 0 else "off")
-st.markdown("Generate innovative project ideas using your hackathon description and uploaded topics!")
-
-# --- Sidebar ---
-st.sidebar.header("📄 Upload Your Topics File (.docx)")
-st.sidebar.markdown("Upload a DOCX file containing relevant topics, technologies, or domain knowledge to enhance idea generation.")
-
-uploaded_file = st.sidebar.file_uploader("Upload DOCX", type=["docx"])
-
-if uploaded_file:
-    # Save uploaded file
-    import os
-    import shutil
-    os.makedirs("data", exist_ok=True)
+def show_login_page():
+    st.title("🔐 Login / Register")
     
-    with open("data/topics.docx", "wb") as f:
-        f.write(uploaded_file.read())
-    st.sidebar.success("✅ Topics file uploaded!")
+    tab1, tab2 = st.tabs(["Login", "Register"])
     
-    # Add a clear database button
-    if st.sidebar.button("🗑️ Clear Old Vector DB"):
-        vector_db_path = "vectorstore/chroma_db"
-        if os.path.exists(vector_db_path):
-            try:
-                shutil.rmtree(vector_db_path)
-                st.sidebar.success("✅ Old vector database cleared!")
-            except Exception as e:
-                st.sidebar.error(f"❌ Error clearing database: {e}")
-        else:
-            st.sidebar.info("ℹ️ No existing database found")
+    with tab1:
+        with st.form("login_form"):
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            submit = st.form_submit_button("Login")
+            
+            if submit:
+                user, msg = auth.login_user(username, password)
+                if user:
+                    st.session_state["user"] = user
+                    st.success(msg)
+                    st.rerun()
+                else:
+                    st.error(msg)
+    
+    with tab2:
+        with st.form("register_form"):
+            new_user = st.text_input("New Username")
+            new_pass = st.text_input("New Password", type="password")
+            new_email = st.text_input("Email (Optional)")
+            submit_reg = st.form_submit_button("Register")
+            
+            if submit_reg:
+                if len(new_user) < 3 or len(new_pass) < 3:
+                    st.warning("Username and Password must be at least 3 characters.")
+                else:
+                    success, msg = auth.register_user(new_user, new_pass, new_email)
+                    if success:
+                        st.success(msg)
+                    else:
+                        st.error(msg)
 
-    if st.sidebar.button("🔄 Create Vector DB"):
-        with st.spinner("Creating vector database..."):
-            # Automatically delete old database before creating new one
+# --- Main App Logic ---
+if st.session_state["user"] is None:
+    show_login_page()
+else:
+    # User is logged in
+    user = st.session_state["user"]
+    username = user["username"]
+    
+    # Refresh credits from DB to ensure accuracy
+    current_credits = auth.get_credits(username)
+    is_admin = user["is_admin"]
+
+    # --- Header & Credits ---
+    col_header, col_credits = st.columns([3, 1])
+    
+    with col_header:
+        st.title("🚀 Hackathon Idea Generator")
+        st.caption(f"Welcome, {username}!")
+    
+    with col_credits:
+        col_logout, col_metric = st.columns([1, 2])
+        with col_logout:
+            if st.button("Logout"):
+                st.session_state["user"] = None
+                st.rerun()
+        with col_metric:
+            if is_admin:
+                st.metric("Credits", "Unlimited ♾️", delta="Admin")
+            else:
+                st.metric("Credits Left", f"{current_credits}/{USAGE_LIMIT}", 
+                         delta="Trial" if current_credits > 0 else "Empty",
+                         delta_color="normal" if current_credits > 0 else "off")
+
+    st.markdown("Generate innovative project ideas using your hackathon description and uploaded topics!")
+    
+    # --- Sidebar ---
+    st.sidebar.header("📄 Upload Your Topics File (.docx)")
+    st.sidebar.markdown("Upload a DOCX file containing relevant topics, technologies, or domain knowledge.")
+    
+    uploaded_file = st.sidebar.file_uploader("Upload DOCX", type=["docx"])
+    
+    if uploaded_file:
+        import os
+        import shutil
+        os.makedirs("data", exist_ok=True)
+        
+        with open("data/topics.docx", "wb") as f:
+            f.write(uploaded_file.read())
+        st.sidebar.success("✅ Topics file uploaded!")
+        
+        if st.sidebar.button("🗑️ Clear Old Vector DB"):
             vector_db_path = "vectorstore/chroma_db"
             if os.path.exists(vector_db_path):
                 try:
                     shutil.rmtree(vector_db_path)
-                    st.sidebar.info("🗑️ Old vector database deleted")
+                    st.sidebar.success("✅ Old vector database cleared!")
                 except Exception as e:
-                    st.sidebar.warning(f"⚠️ Could not delete old database: {e}")
-            
-            # Create new vector database
-            create_vector_db("data/topics.docx")
-            st.sidebar.success("✅ Vector DB created successfully!")
-
-# Add info section in sidebar
-st.sidebar.markdown("---")
-st.sidebar.markdown("### ℹ️ How It Works")
-st.sidebar.markdown("""
-1. **Upload Topics** (Optional): Add domain knowledge
-2. **Enter Hackathon Description**: Paste the competition details
-3. **Generate Ideas**: Get AI-powered project suggestions
-4. **Generate Content**: Create detailed documentation for each idea
-""")
-
-# --- Admin Access ---
-st.sidebar.markdown("---")
-with st.sidebar.expander("🔐 Admin Access"):
-    admin_pass = st.text_input("Enter Admin Password", type="password", key="admin_pass_input")
-    # Check against secrets or default
-    secret_pass = st.secrets.get("ADMIN_PASSWORD", "admin123") 
-    if admin_pass == secret_pass:
-        st.session_state["is_admin"] = True
-        st.sidebar.success("✅ Admin Mode Active")
-    else:
-        st.session_state["is_admin"] = False
-
-# --- Main Area ---
-st.markdown("## 📝 Hackathon Description")
-hackathon_text = st.text_area(
-    "✍️ Paste your Hackathon / Competition Description", 
-    height=150,
-    placeholder="Example: Build an AI-powered healthcare solution that helps rural communities access medical diagnosis using mobile devices..."
-)
-
-# Create two columns for buttons
-col1, col2 = st.columns(2)
-
-with col1:
-    summarize_btn = st.button("🧠 Summarize Theme", use_container_width=True)
-
-with col2:
-    generate_btn = st.button("✨ Generate Ideas", use_container_width=True, type="primary")
-
-# Summarize Theme
-if summarize_btn:
-    if not hackathon_text:
-        st.warning("⚠️ Please enter a hackathon description first.")
-    else:
-        with st.spinner("Analyzing theme..."):
-            summary = summarize_text(hackathon_text)
-            st.session_state["summary"] = summary
-            
-            st.markdown("### 🧠 Summarized Theme")
-            st.info(summary)
-
-# Initialize usage counter
-if "usage_count" not in st.session_state:
-    st.session_state["usage_count"] = 0
-
-# Generate Ideas
-if generate_btn:
-    if not hackathon_text:
-        st.warning("⚠️ Please enter a hackathon description first.")
-    # Check limit unless Admin
-    elif st.session_state.get("usage_count", 0) >= USAGE_LIMIT and not st.session_state.get("is_admin", False):
-        st.error(f"🚫 Usage limit reached! You have used your {USAGE_LIMIT} free trials for this session.")
-        st.info("🔐 Enter Admin Password in sidebar for unlimited access.")
-    else:
-        with st.spinner("🔍 Analyzing and generating innovative ideas..."):
-            # Increment usage count only if not admin
-            if not st.session_state.get("is_admin", False):
-                st.session_state["usage_count"] += 1
-                trials_left = USAGE_LIMIT - st.session_state["usage_count"]
-                st.toast(f"Trial used! {trials_left} remaining.", icon="ℹ️")
-
-            # Step 1: Summarize
-            summary = summarize_text(hackathon_text)
-            st.session_state["summary"] = summary
-            
-            # Step 2: Retrieve relevant topics from vector DB
-            retrieved_topics = retrieve_relevant_topics(summary)
-            
-            # Step 3: Find relevant resources (for context in generation)
-            resources = find_relevant_resources(summary)
-            
-            # Step 4: Generate hackathon ideas (force table format)
-            ideas = generate_hackathon_ideas(summary, retrieved_topics, resources)
-            
-            # Store in session state
-            st.session_state["raw_ideas"] = ideas
-            
-            # Display the ideas table
-            st.markdown("---")
-            st.markdown("## 💡 Generated Hackathon Ideas")
-            st.markdown(ideas)
-            
-            # --- Extract ideas with descriptions from the generated content ---
-            # Parse the markdown table or list to extract idea details
-            lines = ideas.split('\n')
-            parsed_ideas = []
-            
-            # Try to parse markdown table format
-            for line in lines:
-                if '|' in line and not line.strip().startswith('|---'):
-                    cells = [cell.strip() for cell in line.split('|')]
-                    cells = [c for c in cells if c]  # Remove empty cells
-                    
-                    # Skip header row
-                    if cells and cells[0].lower() not in ['title', 'summary', 'tech stack', 'example repo', 'novelty', 'innovation level']:
-                        if len(cells) >= 2:  # At least title and summary
-                            parsed_ideas.append({
-                                'title': cells[0],
-                                'summary': cells[1] if len(cells) > 1 else '',
-                                'tech_stack': cells[2] if len(cells) > 2 else '',
-                            })
-            
-            # Fallback: Extract numbered ideas if table parsing fails
-            if not parsed_ideas:
-                title_pattern = r'(?:\d+\.\s*\*\*|###?\s*)([^:\n]+)'
-                titles = re.findall(title_pattern, ideas)
-                for title in titles[:5]:
-                    parsed_ideas.append({
-                        'title': title.strip('*').strip(),
-                        'summary': '',
-                        'tech_stack': ''
-                    })
-            
-            st.session_state["parsed_ideas"] = parsed_ideas[:5]
-
-def extract_keywords_from_text(text):
-    """
-    Extract important keywords from the idea description using OpenAI.
-    """
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a keyword extraction expert. Extract 3-5 key technical terms or concepts from the given text. Return only comma-separated keywords, nothing else."
-                },
-                {
-                    "role": "user",
-                    "content": f"Extract keywords from: {text}"
-                }
-            ],
-            temperature=0.3,
-            max_tokens=50
-        )
-        keywords = response.choices[0].message.content.strip()
-        return keywords
-    except:
-        return text[:50]  # Fallback to first 50 chars
-
-# --- Show Ideas + Required Content Generation ---
-if "parsed_ideas" in st.session_state and st.session_state["parsed_ideas"]:
-    ideas_list = st.session_state["parsed_ideas"]
+                    st.sidebar.error(f"❌ Error clearing database: {e}")
+            else:
+                st.sidebar.info("ℹ️ No existing database found")
     
-    st.markdown("---")
-    st.markdown("## 📋 Generate Required Contents")
-    st.markdown("Create detailed documentation and GitHub resources for each generated idea:")
-
-    for i, idea in enumerate(ideas_list):
-        idea_title = idea['title']
-        idea_summary = idea['summary']
-        idea_tech = idea['tech_stack']
-        
-        with st.expander(f"💡 Idea {i+1}: {idea_title}", expanded=False):
-            
-            # Show idea details
-            if idea_summary:
-                st.markdown(f"**Summary:** {idea_summary}")
-            if idea_tech:
-                st.markdown(f"**Tech Stack:** {idea_tech}")
-            
-            st.markdown("---")
-            
-            # Generate required content button
-            if st.button(f"📝 Generate Required Contents", key=f"content_{i}"):
-                with st.spinner("🔍 Extracting keywords and searching resources..."):
-                    
-                    # Extract keywords from THIS SPECIFIC IDEA (title + summary)
-                    # NOT from the original hackathon description
-                    search_text = f"{idea_title}. {idea_summary}"
-                    keywords = extract_keywords_from_text(search_text)
-                    
-                    st.info(f"🔑 Extracted Keywords: {keywords}")
-                    
-                    # Search GitHub based on extracted keywords
-                    github_results = []
-                    
-                    try:
-                        # GitHub search API
-                        search_query = keywords.replace(',', ' ').strip()
-                        url = f"https://api.github.com/search/repositories?q={search_query}+stars:>100&sort=stars&order=desc&per_page=5"
-                        
-                        headers = {"Accept": "application/vnd.github+json"}
-                        if "github_token" in st.secrets:
-                            headers["Authorization"] = f"token {st.secrets['github_token']}"
-                        
-                        response = requests.get(url, headers=headers, timeout=10)
-                        
-                        if response.status_code == 200:
-                            items = response.json().get("items", [])
-                            for item in items[:5]:
-                                github_results.append({
-                                    "name": item.get("name", ""),
-                                    "url": item.get("html_url", ""),
-                                    "description": item.get("description", "No description"),
-                                    "stars": item.get("stargazers_count", 0),
-                                    "language": item.get("language", "N/A")
-                                })
-                    except Exception as e:
-                        st.warning(f"⚠️ Could not fetch GitHub results: {str(e)}")
-                    
-                    if github_results:
-                        st.markdown("#### 🔗 GitHub Repositories:")
-                        for repo in github_results:
-                            st.markdown(f"- **[{repo['name']}]({repo['url']})** ({repo['language']}) - ⭐ {repo['stars']:,}")
-                            st.caption(repo['description'])
-                    else:
-                        st.info("No GitHub repositories found for these keywords.")
-                    
-                    st.markdown("---")
-                    
-                    # Generate Literature Review Resources
-                    st.markdown("#### 📚 Literature Review Resources:")
-                    
-                    # Prepare search query for URLs
-                    search_query_encoded = keywords.replace(',', ' ').replace(' ', '+').strip()
-                    
-                    literature_resources = [
-                        {
-                            "name": "Google Scholar",
-                            "url": f"https://scholar.google.com/scholar?q={search_query_encoded}",
-                            "description": "Academic papers and research articles",
-                            "icon": "📚"
-                        },
-                        {
-                            "name": "arXiv.org",
-                            "url": f"https://arxiv.org/search/?query={search_query_encoded}&searchtype=all",
-                            "description": "Latest preprints and research papers",
-                            "icon": "📄"
-                        },
-                        {
-                            "name": "IEEE Xplore",
-                            "url": f"https://ieeexplore.ieee.org/search/searchresult.jsp?queryText={search_query_encoded}",
-                            "description": "Technical literature and conference papers",
-                            "icon": "🔬"
-                        },
-                        {
-                            "name": "ResearchGate",
-                            "url": f"https://www.researchgate.net/search?q={search_query_encoded}",
-                            "description": "Research papers and academic publications",
-                            "icon": "🎓"
-                        },
-                        {
-                            "name": "Wikipedia",
-                            "url": f"https://en.wikipedia.org/wiki/Special:Search?search={search_query_encoded}",
-                            "description": "General background and foundational knowledge",
-                            "icon": "📖"
-                        },
-                        {
-                            "name": "Medium Articles",
-                            "url": f"https://medium.com/search?q={search_query_encoded}",
-                            "description": "Developer articles and practical tutorials",
-                            "icon": "✍️"
-                        }
-                    ]
-                    
-                    for resource in literature_resources:
-                        st.markdown(f"- {resource['icon']} **[{resource['name']}]({resource['url']})** - {resource['description']}")
-                    
-                    st.markdown("---")
+        if st.sidebar.button("🔄 Create Vector DB"):
+            with st.spinner("Creating vector database..."):
+                vector_db_path = "vectorstore/chroma_db"
+                if os.path.exists(vector_db_path):
+                    shutil.rmtree(vector_db_path)
+                create_vector_db("data/topics.docx")
+                st.sidebar.success("✅ Vector DB created successfully!")
+    
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### ℹ️ How It Works")
+    st.sidebar.markdown("""
+    1. **Upload Topics** (Optional)
+    2. **Enter Description**
+    3. **Generate Ideas**
+    4. **Generate Content**
+    """)
+    
+    # --- Main Input Area ---
+    st.markdown("## 📝 Hackathon Description")
+    hackathon_text = st.text_area(
+        "✍️ Paste your Hackathon / Competition Description", 
+        height=150,
+        placeholder="Example: Build an AI-powered healthcare solution..."
+    )
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        summarize_btn = st.button("🧠 Summarize Theme", use_container_width=True)
+    with col2:
+        generate_btn = st.button("✨ Generate Ideas", use_container_width=True, type="primary")
+    
+    # Summarize Logic (No Credit Cost)
+    if summarize_btn:
+        if not hackathon_text:
+            st.warning("⚠️ Please enter a hackathon description first.")
+        else:
+            with st.spinner("Analyzing theme..."):
+                summary = summarize_text(hackathon_text)
+                st.session_state["summary"] = summary
+                st.markdown("### 🧠 Summarized Theme")
+                st.info(summary)
+    
+    # Generation Logic (Costs Credits)
+    if generate_btn:
+        if not hackathon_text:
+            st.warning("⚠️ Please enter a hackathon description first.")
+        # Check Credits
+        elif current_credits <= 0 and not is_admin:
+            st.error("🚫 You have run out of credits! Ask the admin for more or create a new account.")
+        else:
+            with st.spinner("🔍 Analyzing and generating innovative ideas..."):
+                # Deduct Credit if not admin
+                if not is_admin:
+                    auth.decrement_credits(username)
+                    st.toast(f"Trial used! {current_credits - 1} remaining.", icon="ℹ️")
                 
-                with st.spinner("📄 Generating required content documentation..."):
-                    prompt = f"""
-                    You are a hackathon documentation expert. Generate comprehensive required content for the project idea: "{idea_title}".
-                    
-                    Summary: {idea_summary}
-                    Tech Stack: {idea_tech}
-                    
-                    Create detailed documentation with the following sections:
-                    
-                    1. **Project Overview** (2-3 sentences)
-                       - Brief description of the project
-                    
-                    2. **Problem Statement** (3-4 points)
-                       - What problem does this solve?
-                       - Why is it important?
-                       - Current limitations or gaps
-                    
-                    3. **Proposed Solution** (4-5 points)
-                       - Your innovative approach
-                       - Key features and functionality
-                       - How it addresses the problem
-                    
-                    4. **Technical Architecture** (4-5 points)
-                       - System design overview
-                       - Main components and their interactions
-                       - Data flow and processing
-                    
-                    5. **Implementation Requirements**
-                       - Required technologies and tools
-                       - APIs or services needed
-                       - Development environment setup
-                    
-                    6. **Expected Outcomes & Impact** (3-4 points)
-                       - Benefits to users/stakeholders
-                       - Measurable success metrics
-                       - Real-world applications
-                    
-                    7. **Future Enhancements** (3-4 points)
-                       - Scalability considerations
-                       - Additional features
-                       - Long-term vision
-                    
-                    Format the output professionally with clear headings and bullet points.
-                    """
+                # --- Generation Process ---
+                summary = summarize_text(hackathon_text)
+                st.session_state["summary"] = summary
+                retrieved_topics = retrieve_relevant_topics(summary)
+                resources = find_relevant_resources(summary)
+                ideas = generate_hackathon_ideas(summary, retrieved_topics, resources)
+                st.session_state["raw_ideas"] = ideas
+                
+                st.markdown("---")
+                st.markdown("## 💡 Generated Hackathon Ideas")
+                st.markdown(ideas)
+                
+                # Parse ideas for content generation
+                lines = ideas.split('\n')
+                parsed_ideas = []
+                for line in lines:
+                    if '|' in line and not line.strip().startswith('|---'):
+                        cells = [c.strip() for c in line.split('|') if c.strip()]
+                        if cells and cells[0].lower() not in ['title', 'summary', 'tech stack', 'example repo', 'novelty']:
+                             # Simple 3-column check
+                            if len(cells) >= 2:
+                                parsed_ideas.append({
+                                    'title': cells[0],
+                                    'summary': cells[1] if len(cells) > 1 else '',
+                                    'tech_stack': cells[2] if len(cells) > 2 else '',
+                                })
+                
+                # Fallback parsing
+                if not parsed_ideas:
+                    title_pattern = r'(?:\d+\.\s*\*\*|###?\s*)([^:\n]+)'
+                    titles = re.findall(title_pattern, ideas)
+                    for title in titles[:5]:
+                        parsed_ideas.append({'title': title.strip('*').strip(), 'summary': '', 'tech_stack': ''})
+                
+                st.session_state["parsed_ideas"] = parsed_ideas[:5]
 
-                    response = client.chat.completions.create(
-                        model="gpt-4o",
-                        messages=[
-                            {
-                                "role": "system", 
-                                "content": "You are a professional technical documentation writer who creates comprehensive, well-structured project documentation."
-                            },
-                            {
-                                "role": "user", 
-                                "content": prompt
-                            }
-                        ],
-                        temperature=0.7,
-                        max_tokens=2500
-                    )
+    # --- Content Generation & Footer ---
+    def extract_keywords_from_text(text):
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "system", "content": "Extract 3-5 keywords, comma-separated."},
+                          {"role": "user", "content": f"Extract from: {text}"}],
+                temperature=0.3, max_tokens=50
+            )
+            return response.choices[0].message.content.strip()
+        except:
+            return text[:50]
 
-                    content_text = response.choices[0].message.content.strip()
+    if "parsed_ideas" in st.session_state and st.session_state["parsed_ideas"]:
+        ideas_list = st.session_state["parsed_ideas"]
+        st.markdown("---")
+        st.markdown("## 📋 Generate Required Contents")
+        
+        for i, idea in enumerate(ideas_list):
+            with st.expander(f"💡 Idea {i+1}: {idea['title']}", expanded=False):
+                if idea['summary']: st.markdown(f"**Summary:** {idea['summary']}")
+                if idea['tech_stack']: st.markdown(f"**Tech Stack:** {idea['tech_stack']}")
+                st.markdown("---")
+                
+                if st.button(f"📝 Generate Required Contents", key=f"content_{i}"):
                     
-                    st.markdown("#### 📄 Generated Required Contents")
-                    st.markdown(content_text)
-                    
-                    # Add download button
-                    full_content = f"""# {idea_title}
+                    with st.spinner("🔍 Extracting keywords..."):
+                        keywords = extract_keywords_from_text(f"{idea['title']}. {idea['summary']}")
+                        st.info(f"🔑 Keywords: {keywords}")
+                        
+                        # GitHub Search
+                        github_results = []
+                        try:
+                            q = keywords.replace(',', ' ').strip()
+                            url = f"https://api.github.com/search/repositories?q={q}+stars:>100&sort=stars&order=desc&per_page=5"
+                            headers = {"Accept": "application/vnd.github+json"}
+                            if "github_token" in st.secrets: headers["Authorization"] = f"token {st.secrets['github_token']}"
+                            resp = requests.get(url, headers=headers, timeout=10)
+                            if resp.status_code == 200:
+                                items = resp.json().get("items", [])
+                                for item in items:
+                                    github_results.append({
+                                        "name": item.get("name"), "url": item.get("html_url"),
+                                        "description": item.get("description"), "stars": item.get("stargazers_count"),
+                                        "language": item.get("language")
+                                    })
+                        except: pass
+                        
+                        if github_results:
+                            st.markdown("#### 🔗 GitHub Repositories:")
+                            for r in github_results:
+                                st.markdown(f"- **[{r['name']}]({r['url']})** ({r['language']}) - ⭐ {r['stars']}")
+                        
+                        # Literature Review
+                        st.markdown("#### 📚 Literature Review:")
+                        q_url = keywords.replace(',', ' ').replace(' ', '+')
+                        st.markdown(f"- [Google Scholar](https://scholar.google.com/scholar?q={q_url})")
+                        st.markdown(f"- [arXiv](https://arxiv.org/search/?query={q_url})")
+                        
+                        # Content Gen
+                        with st.spinner("📄 Generating docs..."):
+                            prompt = f"Generate project docs for: {idea['title']}. Summary: {idea['summary']}. Tech: {idea['tech_stack']}. Sections: Overview, Problem, Solution, Architecture, Requirements, Impact, Future."
+                            resp = client.chat.completions.create(
+                                model="gpt-4o", messages=[
+                                    {"role": "system", "content": "You are a tech writer."},
+                                    {"role": "user", "content": prompt}
+                                ], temperature=0.7
+                            )
+                            content_text = resp.choices[0].message.content.strip()
+                            st.markdown("#### 📄 Generated Docs")
+                            st.markdown(content_text)
+                            st.download_button("💾 Download", content_text, f"{idea['title']}.md")
 
-## Summary
-{idea_summary}
-
-## Tech Stack
-{idea_tech}
-
-## Keywords
-{keywords}
-
-## GitHub Repositories
-{chr(10).join([f"- [{r['name']}]({r['url']}) - {r['language']} (⭐ {r['stars']:,})" for r in github_results]) if github_results else "No GitHub repositories found"}
-
-## Literature Review Resources
-- 📚 [Google Scholar](https://scholar.google.com/scholar?q={keywords.replace(',', ' ').replace(' ', '+')})
-- 📄 [arXiv.org](https://arxiv.org/search/?query={keywords.replace(',', ' ').replace(' ', '+')}&searchtype=all)
-- 🔬 [IEEE Xplore](https://ieeexplore.ieee.org/search/searchresult.jsp?queryText={keywords.replace(',', ' ').replace(' ', '+')})
-- 🎓 [ResearchGate](https://www.researchgate.net/search?q={keywords.replace(',', ' ').replace(' ', '+')})
-- 📖 [Wikipedia](https://en.wikipedia.org/wiki/Special:Search?search={keywords.replace(',', ' ').replace(' ', '+')})
-- ✍️ [Medium Articles](https://medium.com/search?q={keywords.replace(',', ' ').replace(' ', '+')})
-
----
-
-{content_text}
-"""
-                    
-                    st.download_button(
-                        label="💾 Download Complete Documentation",
-                        data=full_content,
-                        file_name=f"{idea_title[:30].replace(' ', '_')}_documentation.md",
-                        mime="text/markdown",
-                        key=f"download_{i}"
-                    )
-
-# Footer
-st.markdown("---")
-st.markdown("""
-    <div style='text-align: center; color: #666; padding: 2rem;'>
-        <p>🚀 Powered by OpenAI GPT-4 & LangChain | Built with Streamlit</p>
-        <p>💡 Generate innovative ideas • 🔗 Find GitHub resources • 📋 Create documentation</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Footer
+    st.markdown("---")
+    st.markdown("<div style='text-align: center; color: #666;'>🚀 Powered by OpenAI GPT-4 | Built with Streamlit</div>", unsafe_allow_html=True)

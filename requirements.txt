@@ -5,6 +5,7 @@ langchain-huggingface
 chromadb
 openai
 sentence-transformers
+passlib
 docx2txt
 requests
 PyPDF2
