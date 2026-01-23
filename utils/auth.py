@@ -66,3 +66,34 @@ def decrement_credits(username):
     c.execute("UPDATE users SET credits_left = credits_left - 1 WHERE username = ?", (username,))
     conn.commit()
     conn.close()
+
+def create_owner_account():
+    """Ensure the owner account exists with admin privileges."""
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    username = "great"
+    password = "rvce"
+    pwd_hash = hash_password(password)
+    
+    # Check if exists
+    c.execute("SELECT * FROM users WHERE username = ?", (username,))
+    if c.fetchone():
+        # Update existing to ensure admin rights and correct password
+        c.execute("""
+            UPDATE users 
+            SET password_hash = ?, is_admin = 1, credits_left = 999999 
+            WHERE username = ?
+        """, (pwd_hash, username))
+    else:
+        # Create new
+        c.execute("""
+            INSERT INTO users (username, password_hash, email, credits_left, is_admin) 
+            VALUES (?, ?, 'owner@hackathon.com', 999999, 1)
+        """, (username, pwd_hash))
+    
+    conn.commit()
+    conn.close()
+
+# Initialize owner account on startup
+create_owner_account()
