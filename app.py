@@ -91,9 +91,7 @@ else:
                 st.session_state["user"] = None
                 st.rerun()
         with col_metric:
-            if is_admin:
-                st.metric("Credits", "Unlimited ♾️", delta="Admin")
-            else:
+            if not is_admin:
                 st.metric("Credits Left", f"{current_credits}/{USAGE_LIMIT}", 
                          delta="Trial" if current_credits > 0 else "Empty",
                          delta_color="normal" if current_credits > 0 else "off")
