@@ -113,22 +113,37 @@ else:
             f.write(uploaded_file.read())
         st.sidebar.success("✅ Topics file uploaded!")
         
+        # Helper for Window file locking
+        def clear_vector_db(path):
+            if os.path.exists(path):
+                import gc
+                import time
+                try:
+                    shutil.rmtree(path)
+                except PermissionError:
+                    gc.collect()
+                    time.sleep(1)
+                    try:
+                        shutil.rmtree(path)
+                    except Exception as e:
+                        st.error(f"⚠️ Could not delete old DB (File in use). Please restart app locally. Error: {e}")
+                except Exception as e:
+                    st.error(f"❌ Error clearing database: {e}")
+
         if st.sidebar.button("🗑️ Clear Old Vector DB"):
             vector_db_path = "vectorstore/chroma_db"
             if os.path.exists(vector_db_path):
-                try:
-                    shutil.rmtree(vector_db_path)
+                clear_vector_db(vector_db_path)
+                if not os.path.exists(vector_db_path):
                     st.sidebar.success("✅ Old vector database cleared!")
-                except Exception as e:
-                    st.sidebar.error(f"❌ Error clearing database: {e}")
             else:
                 st.sidebar.info("ℹ️ No existing database found")
     
         if st.sidebar.button("🔄 Create Vector DB"):
             with st.spinner("Creating vector database..."):
                 vector_db_path = "vectorstore/chroma_db"
-                if os.path.exists(vector_db_path):
-                    shutil.rmtree(vector_db_path)
+                clear_vector_db(vector_db_path)
+                # Only create if cleared or didn't exist
                 create_vector_db("data/topics.docx")
                 st.sidebar.success("✅ Vector DB created successfully!")
     
