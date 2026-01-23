@@ -30,8 +30,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-    </style>
-    """, unsafe_allow_html=True)
+
 
 # --- Header & Credits ---
 col_header, col_credits = st.columns([3, 1])
