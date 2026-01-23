@@ -115,12 +115,25 @@ if summarize_btn:
             st.markdown("### 🧠 Summarized Theme")
             st.info(summary)
 
+# Initialize usage counter
+if "usage_count" not in st.session_state:
+    st.session_state["usage_count"] = 0
+
+USAGE_LIMIT = 2
+
 # Generate Ideas
 if generate_btn:
     if not hackathon_text:
         st.warning("⚠️ Please enter a hackathon description first.")
+    elif st.session_state["usage_count"] >= USAGE_LIMIT:
+        st.error(f"🚫 Usage limit reached! You have used your {USAGE_LIMIT} free trials for this session.")
     else:
         with st.spinner("🔍 Analyzing and generating innovative ideas..."):
+            # Increment usage count
+            st.session_state["usage_count"] += 1
+            trials_left = USAGE_LIMIT - st.session_state["usage_count"]
+            st.toast(f"Trial used! {trials_left} remaining.", icon="ℹ️")
+
             # Step 1: Summarize
             summary = summarize_text(hackathon_text)
             st.session_state["summary"] = summary
