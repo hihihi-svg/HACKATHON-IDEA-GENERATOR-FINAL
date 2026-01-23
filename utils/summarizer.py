@@ -4,7 +4,12 @@ from openai import OpenAI
 import os
 
 # Initialize OpenAI client
-api_key = st.secrets.get("openai_api_key") if st.secrets and "openai_api_key" in st.secrets else os.environ.get("OPENAI_API_KEY")
+# Initialize OpenAI client
+try:
+    api_key = st.secrets["openai_api_key"]
+except:
+    api_key = os.environ.get("OPENAI_API_KEY")
+
 client = OpenAI(api_key=api_key)
 
 def summarize_text(text):
