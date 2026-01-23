@@ -72,8 +72,9 @@ def create_owner_account():
     conn = get_db_connection()
     c = conn.cursor()
     
+    import os
     username = "great"
-    password = "rvce"
+    password = os.environ.get("ADMIN_PASSWORD", "rvce")
     pwd_hash = hash_password(password)
     
     # Check if exists

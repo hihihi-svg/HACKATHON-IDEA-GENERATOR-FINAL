@@ -8,8 +8,11 @@ from utils.resource_finder import find_relevant_resources
 from utils.topic_generator import generate_hackathon_ideas
 import utils.auth as auth
 
+import os
+
 # ✅ Initialize OpenAI client
-client = OpenAI(api_key=st.secrets["openai_api_key"])
+api_key = st.secrets.get("openai_api_key") if st.secrets and "openai_api_key" in st.secrets else os.environ.get("OPENAI_API_KEY")
+client = OpenAI(api_key=api_key)
 
 # Constants
 USAGE_LIMIT = 2
