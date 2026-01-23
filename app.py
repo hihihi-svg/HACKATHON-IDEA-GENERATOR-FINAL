@@ -10,6 +10,9 @@ from utils.topic_generator import generate_hackathon_ideas
 # ✅ Initialize OpenAI client with latest API
 client = OpenAI(api_key=st.secrets["openai_api_key"])
 
+# Constants
+USAGE_LIMIT = 2
+
 st.set_page_config(page_title="Hackathon Idea Generator", page_icon="🚀", layout="wide")
 
 # Custom CSS for better styling
@@ -144,8 +147,6 @@ if summarize_btn:
 # Initialize usage counter
 if "usage_count" not in st.session_state:
     st.session_state["usage_count"] = 0
-
-USAGE_LIMIT = 2
 
 # Generate Ideas
 if generate_btn:
