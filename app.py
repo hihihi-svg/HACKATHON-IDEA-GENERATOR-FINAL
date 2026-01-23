@@ -141,6 +141,8 @@ else:
     4. **Generate Content**
     """)
     
+    st.sidebar.info("🌐 **Note:** This is a shared knowledge base! If you update the topics, it updates for everyone.")
+    
     # --- Main Input Area ---
     st.markdown("## 📝 Hackathon Description")
     hackathon_text = st.text_area(
