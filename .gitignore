@@ -1,0 +1,45 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Jupyter Notebook
+.ipynb_checkpoints
+.virtual_documents
+
+# Environment variables
+.env
+.env.local
+
+# Streamlit secrets (contains API keys)
+.streamlit/secrets.toml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated files
+generated_ppts/
+*.pptx
+
+# Vector store (if large)
+# vectorstore/
+
+# Nested Git repositories
+HACKATHON-IDEA-GENERATOR-FINAL/
+HACKATHON IDEA GENERATOR - Copy/
+git/

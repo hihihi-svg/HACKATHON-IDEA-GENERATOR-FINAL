@@ -1,0 +1,11 @@
+streamlit
+langchain
+chromadb
+openai
+sentence-transformers
+docx2txt
+requests
+PyPDF2
+tavily-python
+python-pptx
+streamlit
