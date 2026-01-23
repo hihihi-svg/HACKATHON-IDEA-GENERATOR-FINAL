@@ -1,70 +1,89 @@
-🚀 AI Hackathon Idea Generator
-💡 Overview
+# 🚀 Hackathon Idea Generator
 
-Ever stared blankly at your teammates during a hackathon wondering what to build?
-This project solves that!
+An AI-powered tool designed to help hackathon teams generate innovative project ideas, detailed documentation, and technical roadmaps instantly.
 
-The AI Hackathon Idea Generator reads hackathon themes, compares them with hundreds of real project ideas, and gives you:
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![Streamlit](https://img.shields.io/badge/Streamlit-App-FF4B4B)
+![OpenAI](https://img.shields.io/badge/AI-OpenAI_GPT-green)
+![LangChain](https://img.shields.io/badge/Framework-LangChain-orange)
 
-Ready-to-build project ideas
+## 💡 Overview
 
-Related GitHub repositories
+Staring at a blank screen during a hackathon? This tool solves "builder's block" by generating:
+- **Innovative Project Ideas** based on the hackathon theme.
+- **Full Documentation** (Problem, Solution, Tech Stack).
+- **GitHub Repository Search** for similar existing projects.
+- **Literature Review** resources.
 
-Sample pitch slides
+It uses **RAG (Retrieval-Augmented Generation)** with ChromaDB to ground ideas in real technical concepts.
 
-Insights on how similar ideas performed and the feedback they received
+## ✨ Key Features
 
-Instead of just brainstorming from scratch, this system learns from real hackathon feedback, evaluator reviews, and project gaps, then generates new ideas grounded in real-world relevance and innovation.
+### 🔐 Authentication & User Management
+- **Secure Login/Register**: Users must create an account to access the tool.
+- **Persistent Credits**: User credits are stored in a database (`users.db`), persisting across sessions.
+- **Registration Limit**: Abuse prevention restricts sign-ups to 5 accounts per device/IP.
 
-⚙️ Features
+### 🛡️ Usage Controls (Freemium Model)
+- **Trial Limit**: Each user gets **2 FREE generations**.
+- **Admin Bypass**: Owner accounts (or those with the Admin Password) get **Unlimited Access**.
+- **Zero-Friction**: No need for users to bring their own API keys; the system is centrally managed.
 
-🧠 AI-based theme matching
+### 🧠 Advanced AI Generation
+- **Topic Retrieval**: Fetches relevant domain knowledge from your uploaded `topics.docx`.
+- **Structured Output**: Generates tables of ideas with "Innovation Level" and "Novelty" scores.
+- **Automated Docs**: Instantly writes a `README.md` style project plan for your chosen idea.
 
-📊 Trained using past hackathon feedback data
+## 🛠️ Tech Stack
 
-💬 Shows previous project insights & evaluator comments
+- **Frontend**: Streamlit
+- **AI/LLM**: OpenAI GPT-4o & GPT-4o-mini
+- **Orchestration**: LangChain
+- **Vector DB**: ChromaDB
+- **Database**: SQLite (User Auth & Credits)
+- **Deployment**: Render
 
-🚀 Generates ready-to-build project ideas with repo and slide links
+## 🚀 Installation & Setup
 
-🌐 Built with Streamlit for easy web-based interaction
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/hihihi-svg/HACKATHON-IDEA-GENERATOR-FINAL.git
+   cd HACKATHON-IDEA-GENERATOR-FINAL
+   ```
 
-🧩 Installation & Setup
-1️⃣ Clone the repository
-git clone https://github.com/your-username/ai-hackathon-idea-generator.git
-cd ai-hackathon-idea-generator
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-2️⃣ Create a virtual environment
-python -m venv venv
+3. **Configure Secrets**
+   Create a `.streamlit/secrets.toml` file:
+   ```toml
+   openai_api_key = "your-key"
+   github_token = "optional-token"
+   ADMIN_PASSWORD = "your-admin-password"
+   ```
 
-3️⃣ Activate the virtual environment
+4. **Run the App**
+   ```bash
+   streamlit run app.py
+   ```
 
-Windows:
+## ☁️ Deployment (Render)
 
-venv\Scripts\activate
+This project is configured for one-click deployment on [Render](https://render.com).
 
+1. Connect your GitHub repo.
+2. Render will auto-detect the `render.yaml` configuration.
+3. Add Environment Variables in the Dashboard:
+   - `OPENAI_API_KEY`
+   - `ADMIN_PASSWORD`
 
-Mac/Linux:
+## ⚖️ Limitations & Future Scope
 
-source venv/bin/activate
+- **Ephemeral Storage**: On free hosting tiers (like Render Free), the SQLite database resets on redeployment. For production, switch `utils/db.py` to use PostgreSQL/Supabase.
+- **Rate Limiting**: Currently capped at 2 trials/user for cost control.
+- **Future**: Add team collaboration features and direct "Export to GitHub" functionality.
 
-4️⃣ Install dependencies
-pip install -r requirements.txt
-
-5️⃣ Add your OpenAI API key
-
-Create a .env file in the root directory and add:
-
-OPENAI_API_KEY=your_api_key_here
-
-6️⃣ Run the app
-streamlit run app.py
-
-🧠 Future Scope
-
-Add user submissions to continuously improve the dataset
-
-Integrate with GitHub API for live repo fetching
-
-Rank ideas by innovation, feasibility, and technical depth
-
-
+---
+*Built for Hackathon excellence.* 🚀

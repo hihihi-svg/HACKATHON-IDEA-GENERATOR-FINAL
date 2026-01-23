@@ -43,3 +43,6 @@ generated_ppts/
 HACKATHON-IDEA-GENERATOR-FINAL/
 HACKATHON IDEA GENERATOR - Copy/
 git/
+
+# Local Database
+users.db
