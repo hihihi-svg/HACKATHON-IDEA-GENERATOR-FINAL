@@ -5,6 +5,13 @@ try:
 except ImportError:
     pass
 
+import os
+import tempfile
+# Force ChromaDB to use temp directory
+os.environ['TMPDIR'] = tempfile.gettempdir()
+os.environ['TEMP'] = tempfile.gettempdir()
+os.environ['TMP'] = tempfile.gettempdir()
+
 import streamlit as st
 import re
 import requests
