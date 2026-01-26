@@ -177,26 +177,33 @@ def find_relevant_resources(query, top_n=5):
         ]
     }
     
-    # Build resource list
-    # Add 2 academic sources
-    resources.extend(resource_templates['academic'][:2])
+    # Build balanced resource list (Variety over Quantity)
     
-    # Add category-specific resources if available
-    if detected_category in category_resources:
-        resources.extend(category_resources[detected_category][:2])
+    # 1. Academic (Strictly 1)
+    resources.extend(resource_templates['academic'][:1])
     
-    # Add datasets (1)
-    resources.extend(resource_templates['datasets'][:1])
-    
-    # Add documentation (1)
-    resources.extend(resource_templates['documentation'][:1])
-    
-    # Add learning resources (1)
-    resources.extend(resource_templates['learning'][:1])
-    
-    # Add code examples (1)
+    # 2. Code / GitHub (Strictly 1)
     resources.extend(resource_templates['code'][:1])
     
+    # 3. Documentation / Articles (Strictly 1)
+    resources.extend(resource_templates['documentation'][:1])
+    
+    # 4. Category Specific (1, if available)
+    if detected_category in category_resources:
+        resources.extend(category_resources[detected_category][:1])
+    
+    # 5. Datasets (1)
+    resources.extend(resource_templates['datasets'][:1])
+
+    # Fill remaining slots if top_n > len(resources)
+    if len(resources) < top_n:
+        # Add a second academic paper if needed
+        resources.extend(resource_templates['academic'][1:2])
+    
+    if len(resources) < top_n:
+        # Add a second code resource or learning resource
+        resources.extend(resource_templates['learning'][:1])
+
     return resources[:top_n]
 
 
