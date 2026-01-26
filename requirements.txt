@@ -11,3 +11,4 @@ requests
 PyPDF2
 tavily-python
 python-pptx
+pysqlite3-binary
