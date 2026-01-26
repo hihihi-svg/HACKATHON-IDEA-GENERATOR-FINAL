@@ -10,10 +10,20 @@ import tempfile
 def create_vector_db(docx_path, persist_directory=None):
     if persist_directory is None:
         persist_directory = os.path.join(tempfile.gettempdir(), "chroma_db")
+    
     """
     Creates a vector database from a DOCX file using LangChain and Chroma.
     """
     try:
+        # FORCE CLEAN START - Delete any existing database
+        if os.path.exists(persist_directory):
+            try:
+                shutil.rmtree(persist_directory)
+                import time
+                time.sleep(0.5)  # Give filesystem time to release
+            except Exception as e:
+                st.warning(f"Cleaning old DB: {e}")
+        
         # 1. Extract text from DOCX
         text = docx2txt.process(docx_path)
         
