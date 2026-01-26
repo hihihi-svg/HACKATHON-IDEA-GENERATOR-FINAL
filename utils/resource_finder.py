@@ -177,31 +177,23 @@ def find_relevant_resources(query, top_n=10):
         ]
     }
     
-    # Build balanced resource list (Variety over Quantity)
+    # Build resource list focused on academic/research resources
     
-    # 1. Academic (Strictly 1)
-    resources.extend(resource_templates['academic'][:1])
+    # 1. All Academic papers first (Google Scholar, arXiv, IEEE)
+    resources.extend(resource_templates['academic'][:3])
     
-    # 2. Code / GitHub (Strictly 1)
-    resources.extend(resource_templates['code'][:1])
-    
-    # 3. Documentation / Articles (Strictly 1)
-    resources.extend(resource_templates['documentation'][:1])
-    
-    # 4. Category Specific (1, if available)
+    # 2. Category Specific research resources (if available)
     if detected_category in category_resources:
-        resources.extend(category_resources[detected_category][:1])
+        resources.extend(category_resources[detected_category][:2])
     
-    # 5. Datasets (1)
-    resources.extend(resource_templates['datasets'][:1])
-
-    # Fill remaining slots if top_n > len(resources)
-    if len(resources) < top_n:
-        # Add a second academic paper if needed
-        resources.extend(resource_templates['academic'][1:2])
+    # 3. Documentation / Articles
+    resources.extend(resource_templates['documentation'][:2])
     
+    # 4. Datasets
+    resources.extend(resource_templates['datasets'][:2])
+    
+    # 5. Learning resources if still need more
     if len(resources) < top_n:
-        # Add a second code resource or learning resource
         resources.extend(resource_templates['learning'][:1])
 
     return resources[:top_n]
