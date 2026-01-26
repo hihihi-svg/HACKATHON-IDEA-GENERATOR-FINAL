@@ -316,11 +316,12 @@ else:
                             for r in github_results:
                                 st.markdown(f"- **[{r['name']}]({r['url']})** ({r['language']}) - ⭐ {r['stars']}")
                         
-                        # Literature Review
+                        # Literature Review - Use dynamic resource finder
                         st.markdown("#### 📚 Literature Review:")
-                        q_url = keywords.replace(',', ' ').replace(' ', '+')
-                        st.markdown(f"- [Google Scholar](https://scholar.google.com/scholar?q={q_url})")
-                        st.markdown(f"- [arXiv](https://arxiv.org/search/?query={q_url})")
+                        lit_resources = find_relevant_resources(keywords, top_n=10)
+                        for resource in lit_resources:
+                            st.markdown(f"**{resource['type']}** - [{resource['name']}]({resource['url']})")
+                            st.caption(resource['description'])
                         
                         # Content Gen
                         with st.spinner("📄 Generating docs..."):
