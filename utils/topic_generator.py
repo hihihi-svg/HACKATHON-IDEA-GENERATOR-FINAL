@@ -1,16 +1,7 @@
 import streamlit as st
 from openai import OpenAI
 
-import os
 
-# Initialize OpenAI client
-# Initialize OpenAI client
-try:
-    api_key = st.secrets["openai_api_key"]
-except:
-    api_key = os.environ.get("OPENAI_API_KEY")
-
-client = OpenAI(api_key=api_key)
 
 def generate_hackathon_ideas(summary, retrieved_topics, repo_results):
     """
@@ -18,6 +9,17 @@ def generate_hackathon_ideas(summary, retrieved_topics, repo_results):
     Forces output in markdown table format.
     """
     try:
+        # Initialize Client
+        try:
+            api_key = st.secrets["openai_api_key"]
+        except:
+            api_key = os.environ.get("OPENAI_API_KEY")
+
+        if not api_key:
+            return "⚠️ OpenAI API Key is missing. Please set it in Streamlit Secrets."
+
+        client = OpenAI(api_key=api_key)
+
         # Format retrieved topics
         if isinstance(retrieved_topics, list):
             topics_text = "\n".join([f"- {topic}" for topic in retrieved_topics])

@@ -17,14 +17,20 @@ import utils.auth as auth
 
 import os
 
-# ✅ Initialize OpenAI client
-# ✅ Initialize OpenAI client
-try:
-    api_key = st.secrets["openai_api_key"]
-except:
-    api_key = os.environ.get("OPENAI_API_KEY")
+import os
 
-client = OpenAI(api_key=api_key)
+# Helper to safely get OpenAI client
+def get_openai_client():
+    try:
+        api_key = st.secrets["openai_api_key"]
+    except:
+        api_key = os.environ.get("OPENAI_API_KEY")
+    
+    if not api_key:
+        return None
+    return OpenAI(api_key=api_key)
+
+client = get_openai_client()
 
 # Constants
 USAGE_LIMIT = 2

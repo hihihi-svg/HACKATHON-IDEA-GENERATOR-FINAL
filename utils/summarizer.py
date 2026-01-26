@@ -1,16 +1,7 @@
 import streamlit as st
 from openai import OpenAI
 
-import os
 
-# Initialize OpenAI client
-# Initialize OpenAI client
-try:
-    api_key = st.secrets["openai_api_key"]
-except:
-    api_key = os.environ.get("OPENAI_API_KEY")
-
-client = OpenAI(api_key=api_key)
 
 def summarize_text(text):
     """
@@ -21,6 +12,18 @@ def summarize_text(text):
     
     try:
         prompt = f"Summarize this competition or hackathon text briefly in 3-4 lines:\n\n{text}"
+        
+        # Initialize Client
+        try:
+            api_key = st.secrets["openai_api_key"]
+        except:
+            api_key = os.environ.get("OPENAI_API_KEY")
+
+        if not api_key:
+            return "⚠️ OpenAI API Key is missing. Please set it in Streamlit Secrets."
+
+        client = OpenAI(api_key=api_key)
+
         
         response = client.chat.completions.create(
             model="gpt-4o",  # Use "gpt-4o-mini" for faster/cheaper responses
