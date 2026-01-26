@@ -8,6 +8,7 @@ except ImportError:
 import streamlit as st
 import re
 import requests
+import tempfile
 from openai import OpenAI
 from utils.summarizer import summarize_text
 from utils.retriever import create_vector_db, retrieve_relevant_topics
@@ -151,7 +152,7 @@ else:
                 except Exception as e:
                     st.error(f"❌ Error clearing database: {e}")
 
-import tempfile
+
         if st.sidebar.button("🗑️ Clear Old Vector DB"):
             vector_db_path = os.path.join(tempfile.gettempdir(), "chroma_db")
             if os.path.exists(vector_db_path):
