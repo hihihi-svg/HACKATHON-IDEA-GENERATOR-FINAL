@@ -9,7 +9,10 @@ import tempfile
 
 def create_vector_db(docx_path, persist_directory=None):
     if persist_directory is None:
-        persist_directory = os.path.join(tempfile.gettempdir(), "chroma_db")
+        # Use timestamped path to ensure fresh DB every time
+        import time
+        timestamp = int(time.time())
+        persist_directory = os.path.join(tempfile.gettempdir(), f"chroma_db_{timestamp}")
     
     """
     Creates a vector database from a DOCX file using LangChain and Chroma.
@@ -68,6 +71,10 @@ def create_vector_db(docx_path, persist_directory=None):
         # Data is automatically persisted when persist_directory is specified
         
         st.success(f"✅ Vector database created with {len(chunks)} chunks!")
+        
+        # Store path in session state for retrieval
+        st.session_state['vector_db_path'] = persist_directory
+        
         return vectordb
     
     except Exception as e:
@@ -77,7 +84,12 @@ def create_vector_db(docx_path, persist_directory=None):
 
 def retrieve_relevant_topics(query, persist_directory=None, top_k=5):
     if persist_directory is None:
-        persist_directory = os.path.join(tempfile.gettempdir(), "chroma_db")
+        # Try to get from session state first
+        if 'vector_db_path' in st.session_state:
+            persist_directory = st.session_state['vector_db_path']
+        else:
+            # Fallback to default (won't find anything but won't crash)
+            persist_directory = os.path.join(tempfile.gettempdir(), "chroma_db")
     """
     Retrieves the most relevant topics from the vector database based on the query.
     """
