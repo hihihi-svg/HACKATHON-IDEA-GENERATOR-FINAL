@@ -96,7 +96,6 @@ def retrieve_relevant_topics(query, persist_directory=None, top_k=5):
     try:
         # Check if vector database exists
         if not os.path.exists(persist_directory):
-            st.warning("⚠️ Vector database not found. Please upload topics and create the database first.")
             return []
         
         # Load embeddings model
