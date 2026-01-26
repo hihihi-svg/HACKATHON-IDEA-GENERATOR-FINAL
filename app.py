@@ -151,8 +151,9 @@ else:
                 except Exception as e:
                     st.error(f"❌ Error clearing database: {e}")
 
+import tempfile
         if st.sidebar.button("🗑️ Clear Old Vector DB"):
-            vector_db_path = "vectorstore/chroma_db"
+            vector_db_path = os.path.join(tempfile.gettempdir(), "chroma_db")
             if os.path.exists(vector_db_path):
                 clear_vector_db(vector_db_path)
                 if not os.path.exists(vector_db_path):
@@ -162,7 +163,7 @@ else:
     
         if st.sidebar.button("🔄 Create Vector DB"):
             with st.spinner("Creating vector database..."):
-                vector_db_path = "vectorstore/chroma_db"
+                vector_db_path = os.path.join(tempfile.gettempdir(), "chroma_db")
                 clear_vector_db(vector_db_path)
                 # Only create if cleared or didn't exist
                 create_vector_db("data/topics.docx")

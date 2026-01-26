@@ -5,7 +5,11 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 import streamlit as st
 import os
 
-def create_vector_db(docx_path, persist_directory="vectorstore/chroma_db"):
+import tempfile
+
+def create_vector_db(docx_path, persist_directory=None):
+    if persist_directory is None:
+        persist_directory = os.path.join(tempfile.gettempdir(), "chroma_db")
     """
     Creates a vector database from a DOCX file using LangChain and Chroma.
     """
@@ -61,7 +65,9 @@ def create_vector_db(docx_path, persist_directory="vectorstore/chroma_db"):
         return None
 
 
-def retrieve_relevant_topics(query, persist_directory="vectorstore/chroma_db", top_k=5):
+def retrieve_relevant_topics(query, persist_directory=None, top_k=5):
+    if persist_directory is None:
+        persist_directory = os.path.join(tempfile.gettempdir(), "chroma_db")
     """
     Retrieves the most relevant topics from the vector database based on the query.
     """
