@@ -1,6 +1,6 @@
 import streamlit as st
 
-def find_relevant_resources(query, top_n=5):
+def find_relevant_resources(query, top_n=10):
     """
     Generates relevant literature survey sources and resource links based on the query.
     Provides academic papers, documentation, datasets, and learning resources.
